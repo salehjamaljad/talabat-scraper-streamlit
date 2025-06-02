@@ -119,7 +119,7 @@ def run_scraper():
         while retries < max_retries:
             
             response = requests.get(url, headers=headers)
-            print(f'{response.status_code} for category {category_name}')
+            st.info(f'{response.status_code} for category {category_name}')
             if response.status_code == 404:
                 globals()[f'stock_amounts_{branch_name}_{category_name}'] = []
 
@@ -128,7 +128,7 @@ def run_scraper():
                 globals()[f'prices_{branch_name}_{category_name}'] = []
 
                 # Check consistency
-                print(f"\nItems Count for branch {branch_name} category {category_name} - Titles: {len(globals()[f'titles_{branch_name}_{category_name}'])}, Prices: {len(globals()[f'prices_{branch_name}_{category_name}'])}, Stocks: {len(globals()[f'stock_amounts_{branch_name}_{category_name}'])}")
+                st.info(f"\nItems Count for branch {branch_name} category {category_name} - Titles: {len(globals()[f'titles_{branch_name}_{category_name}'])}, Prices: {len(globals()[f'prices_{branch_name}_{category_name}'])}, Stocks: {len(globals()[f'stock_amounts_{branch_name}_{category_name}'])}")
                 break
             elif response.status_code == 200:
                 # Extract data
@@ -139,21 +139,21 @@ def run_scraper():
 
                 globals()[f'prices_{branch_name}_{category_name}'] = list(map(float, re.findall(r'"price":\s*(\d+\.?\d*)', response.text)))
 
-                # Print results
+                # st.info results
                 for title, price, stock in zip(globals()[f'titles_{branch_name}_{category_name}'], globals()[f'prices_{branch_name}_{category_name}'], globals()[f'stock_amounts_{branch_name}_{category_name}']):
-                    print(f"{title}: {price} EGP (Stock: {stock})")
+                    st.info(f"{title}: {price} EGP (Stock: {stock})")
 
                 # Check consistency
-                print(f"\nItems Count for branch {branch_name} category {category_name} - Titles: {len(globals()[f'titles_{branch_name}_{category_name}'])}, Prices: {len(globals()[f'prices_{branch_name}_{category_name}'])}, Stocks: {len(globals()[f'stock_amounts_{branch_name}_{category_name}'])}")
+                st.info(f"\nItems Count for branch {branch_name} category {category_name} - Titles: {len(globals()[f'titles_{branch_name}_{category_name}'])}, Prices: {len(globals()[f'prices_{branch_name}_{category_name}'])}, Stocks: {len(globals()[f'stock_amounts_{branch_name}_{category_name}'])}")
                 break
             elif "Cannot read properties of undefined" in response.text:
-                print(f"Encountered error for URL {url}. Performing secondary request with aid: {branch_aid}")
+                st.info(f"Encountered error for URL {url}. Performing secondary request with aid: {branch_aid}")
 
                 # Construct and perform the secondary request
                 secondary_url = f"https://www.talabat.com/ar/egypt/grocery/{branch_id}/talabat-mart/fruit-veg/fresh-fruit?aid={branch_aid}"
                 requests.get(secondary_url, headers=headers)
 
-                print(f"Secondary request complete. Retrying original request for {url}")
+                st.info(f"Secondary request complete. Retrying original request for {url}")
 
                 # Retry the original request after a short delay
                 time.sleep(2)  # Give some time for the server to process the secondary request
@@ -165,25 +165,31 @@ def run_scraper():
                 random_delay(3000,5000)
                 response = requests.get(url, headers=headers)
             else:
-                print(f"Failed to fetch data. Status code: {response.status_code}, {branch_id}")
-                print(response.text)
+                st.info(f"Failed to fetch data. Status code: {response.status_code}, {branch_id}")
+                st.info(response.text)
                 retries += 1
                 headers["User-Agent"] = random.choice(user_agents)
                 random_delay(7500, 15000)
                 if retries == max_retries:
-                    print("Max retries reached. Skipping...")
+                    st.info("Max retries reached. Skipping...")
                     branch_errors.append(branch_id)
                     categories_errors.append(category_id)
 
 
     for branch in branch_info:
-        random_delay(7500, 15000)
-        print(f"Starting categories for branch {branch['name']}")
+        random_delay(7500,15000)
+        threads = []
+        st.info(f"Starting categories for branch {branch['name']}")
 
-        # Run scraper on each category one by one, in order
+        # Start threads for the 4 categories concurrently
         for category_id, category_name in category_names.items():
-            scraper(branch["id"], category_id, category_name)
-            random_delay(1500,3000)
+            t = threading.Thread(target=scraper, args=(branch["id"], category_id, category_name))
+            threads.append(t)
+            t.start()
+
+        # Wait for all category threads to finish before moving to the next branch
+        for t in threads:
+            t.join()
 
         st.info(f"Finished categories for branch {branch['name']}")
 
@@ -250,7 +256,7 @@ def run_scraper():
             for category_name, df in branch_dfs.items():
                 df.to_excel(writer, sheet_name=category_name, index=False)
 
-        print(f"Saved {file_name} successfully!")
+        st.info(f"Saved {file_name} successfully!")
 
     # Merge DataFrames for each category across all Alexandria branches
     for category_name in category_names.values():
@@ -316,7 +322,7 @@ def run_scraper():
             if df is not None:
                 df.to_excel(writer, sheet_name=category_name, index=False)
 
-    print(f"File saved successfully at {file_name}")
+    st.info(f"File saved successfully at {file_name}")
 
 
     # Merge DataFrames for each category across all Cairo branches
@@ -383,7 +389,7 @@ def run_scraper():
             if df is not None:
                 df.to_excel(writer, sheet_name=category_name, index=False)
 
-    print(f"File saved successfully at {file_name}")
+    st.info(f"File saved successfully at {file_name}")
 
 
     # Merge DataFrames for each category across all talabat branches
@@ -450,7 +456,7 @@ def run_scraper():
             if df is not None:
                 df.to_excel(writer, sheet_name=category_name, index=False)
 
-    print(f"File saved successfully at {file_name}")
+    st.info(f"File saved successfully at {file_name}")
 
 
 
@@ -485,7 +491,7 @@ def run_scraper():
             fields='id'
         )
         response = request.execute()
-        print(f"Uploaded {file_path} with ID {response['id']}")
+        st.info(f"Uploaded {file_path} with ID {response['id']}")
 
     # Function to upload an entire folder to Google Drive
     def upload_folder(local_folder_path, parent_folder_id):
@@ -497,7 +503,7 @@ def run_scraper():
         }
         folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
         folder_id = folder['id']
-        print(f"Created folder with ID {folder_id} on Google Drive.")
+        st.info(f"Created folder with ID {folder_id} on Google Drive.")
 
         # Upload each file in the local folder into the created Google Drive folder
         for root, dirs, files in os.walk(local_folder_path):
@@ -536,5 +542,5 @@ def run_scraper():
         worksheet = spreadsheet.worksheet(category)
         worksheet.update([globals()[f'df_talabat_{category}'].columns.values.tolist()] + globals()[f'df_talabat_{category}'].values.tolist())
 
-    print("Talabat Done")
+    st.info("Talabat Done")
 
