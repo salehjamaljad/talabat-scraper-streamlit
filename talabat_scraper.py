@@ -169,7 +169,7 @@ def run_scraper():
                 print(response.text)
                 retries += 1
                 headers["User-Agent"] = random.choice(user_agents)
-                random_delay(3000, 10000)
+                random_delay(7500, 15000)
                 if retries == max_retries:
                     print("Max retries reached. Skipping...")
                     branch_errors.append(branch_id)
@@ -177,7 +177,7 @@ def run_scraper():
 
 
     for branch in branch_info:
-        random_delay(10000,20000)
+        random_delay(7500,15000)
         threads = []
         print(f"Starting categories for branch {branch['name']}")
 
