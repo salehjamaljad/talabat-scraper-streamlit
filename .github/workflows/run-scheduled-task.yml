@@ -1,0 +1,28 @@
+name: Run Talabat Scraper Twice Daily
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 06:00 Cairo time
+    - cron: '0 19 * * *'  # 22:00 Cairo time
+  workflow_dispatch:      # Allow manual/manual trigger if needed
+
+jobs:
+  run-talabat-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'  # Update if your script needs a different version
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run talabat_scraper.py
+        run: |
+          python talabat_scraper.py
