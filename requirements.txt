@@ -1,15 +1,21 @@
-# ─────── Corrected requirements.txt ───────
+# ───────────────────────────────────────────────────────────────────────────────
+# talabat_scraper requirements.txt
+#
+# NOTE: Under Python 3.13, numpy==1.25.0 has no prebuilt wheel and tries to build
+# from source (which fails because distutils is missing). The fix is to let pip
+# install “numpy>=1.25.0” so that it picks up a newer wheel that does support 3.13.
+#────────────────────────────────────────────────────────────────────────────────
 
 streamlit==1.30.0
 requests==2.31.0
 openpyxl==3.1.2
-pandas==2.0.1
-numpy==1.25.0
+pandas>=2.0.1          # loosened so that it can accept whatever NumPy pip chooses
+numpy>=1.25.0          # no longer pinned to 1.25.0 exactly, so pip can grab a wheel for Py3.13
 gspread==5.10.0
-gspread-dataframe==4.0.0      # changed from 4.0.2 to 4.0.0
+gspread-dataframe==4.0.0
 oauth2client==4.1.3
 google-api-python-client==2.91.0
 google-auth==2.23.0
 pytz==2024.1
 
-# ────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────────────────────
