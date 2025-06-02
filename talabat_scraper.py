@@ -177,7 +177,7 @@ def run_scraper():
 
 
     for branch in branch_info:
-        random_delay(5000,7500)
+        random_delay(10000,20000)
         threads = []
         print(f"Starting categories for branch {branch['name']}")
 
