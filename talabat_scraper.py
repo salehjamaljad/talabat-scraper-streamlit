@@ -177,19 +177,12 @@ def run_scraper():
 
 
     for branch in branch_info:
-        random_delay(7500,15000)
-        threads = []
+        random_delay(7500, 15000)
         print(f"Starting categories for branch {branch['name']}")
 
-        # Start threads for the 4 categories concurrently
+        # Run scraper on each category one by one, in order
         for category_id, category_name in category_names.items():
-            t = threading.Thread(target=scraper, args=(branch["id"], category_id, category_name))
-            threads.append(t)
-            t.start()
-
-        # Wait for all category threads to finish before moving to the next branch
-        for t in threads:
-            t.join()
+            scraper(branch["id"], category_id, category_name)
 
         print(f"Finished categories for branch {branch['name']}")
 
