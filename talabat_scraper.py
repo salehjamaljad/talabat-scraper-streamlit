@@ -185,7 +185,7 @@ def run_scraper():
             scraper(branch["id"], category_id, category_name)
             random_delay(1500,3000)
 
-        print(f"Finished categories for branch {branch['name']}")
+        st.info(f"Finished categories for branch {branch['name']}")
 
 
     SERVICE_ACCOUNT_DICT = json.loads(st.secrets["SERVICE_ACCOUNT_DICT"])
