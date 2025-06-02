@@ -183,6 +183,7 @@ def run_scraper():
         # Run scraper on each category one by one, in order
         for category_id, category_name in category_names.items():
             scraper(branch["id"], category_id, category_name)
+            random_delay(1500,3000)
 
         print(f"Finished categories for branch {branch['name']}")
 
