@@ -544,3 +544,5 @@ def run_scraper():
 
     st.info("Talabat Done")
 
+if __name__ == "__main__":
+    run_scraper()
