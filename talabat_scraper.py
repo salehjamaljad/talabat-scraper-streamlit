@@ -177,7 +177,7 @@ def run_scraper():
 
 
     for branch in branch_info:
-        random_delay(7500,15000)
+        random_delay(3000,15000)
         threads = []
         st.info(f"Starting categories for branch {branch['name']}")
 
@@ -514,39 +514,74 @@ def run_scraper():
             for file in files:
                 file_path = os.path.join(root, file)
                 upload_file(file_path, folder_id)
+                random_delay(1000,3000)
 
     # Upload the folder and its contents
     upload_folder(local_folder_path, parent_folder_id)
 
 
-    spreadsheet = client.open_by_key("1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k")
 
-    for idx, category in enumerate(category_names.values()):
-        # Open the worksheet (tab) corresponding to the category name
-        worksheet = spreadsheet.worksheet(category)
-
-        # Fetch all records from the sheet and convert them into a pandas DataFrame
-        data = pd.DataFrame(worksheet.get_all_records())
-
-        # Store the DataFrame using globals() to dynamically create variable names
-        globals()[f'df_talabat_{category}_old'] = data
-
+    spreadsheet = client.open_by_key("1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk")
 
     for category in category_names.values():
-        # Concatenate the old and new DataFrames (assuming the new data is available as a DataFrame)
-        globals()[f'df_talabat_{category}'] = pd.concat(
-            [globals()[f'df_talabat_{category}'], globals()[f'df_talabat_{category}_old']],
-            ignore_index=True
-        )
+        # Reset the index
+        globals()[f'df_cairo_{category}'].reset_index(drop=True, inplace=True)
 
+        # Open the worksheet
+        worksheet = spreadsheet.worksheet(category)
+
+        # Clear the sheet before uploading the new data
+        worksheet.clear()
+
+        # Upload the updated DataFrame to the sheet
+        worksheet.update(
+            [globals()[f'df_cairo_{category}'].columns.values.tolist()] +
+            globals()[f'df_cairo_{category}'].values.tolist()
+        )
+    st.info("Cairo Done")
+    random_delay(3000,7500)
+
+
+    spreadsheet = client.open_by_key("1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW")
+
+    for category in category_names.values():
+        # Reset the index
+        globals()[f'df_alexandria_{category}'].reset_index(drop=True, inplace=True)
+
+        # Open the worksheet
+        worksheet = spreadsheet.worksheet(category)
+
+        # Clear the sheet before uploading the new data
+        worksheet.clear()
+
+        # Upload the updated DataFrame to the sheet
+        worksheet.update(
+            [globals()[f'df_alexandria_{category}'].columns.values.tolist()] +
+            globals()[f'df_alexandria_{category}'].values.tolist()
+        )
+    st.info("Alexandria Done")
+    random_delay(3000,7500)
+
+    spreadsheet = client.open_by_key("1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k")
+
+    for category in category_names.values():
         # Reset the index
         globals()[f'df_talabat_{category}'].reset_index(drop=True, inplace=True)
 
-        # Upload the updated DataFrame to the respective sheet in Google Sheets
+        # Open the worksheet
         worksheet = spreadsheet.worksheet(category)
-        worksheet.update([globals()[f'df_talabat_{category}'].columns.values.tolist()] + globals()[f'df_talabat_{category}'].values.tolist())
+
+        # Clear the sheet before uploading the new data
+        worksheet.clear()
+
+        # Upload the updated DataFrame to the sheet
+        worksheet.update(
+            [globals()[f'df_talabat_{category}'].columns.values.tolist()] +
+            globals()[f'df_talabat_{category}'].values.tolist()
+        )
 
     st.info("Talabat Done")
+
 
 if __name__ == "__main__":
     run_scraper()
