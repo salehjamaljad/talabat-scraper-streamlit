@@ -542,7 +542,7 @@ def run_scraper():
     random_delay(3000,7500)
 
 
-    spreadsheet = client.open_by_key("1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW")
+    spreadsheet = client.open_by_key("1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4")
 
     for category in category_names.values():
         # Reset the index
