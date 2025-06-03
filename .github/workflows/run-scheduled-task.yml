@@ -3,8 +3,9 @@ name: Run Talabat Scraper
 on:
   workflow_dispatch:  # allows manual trigger
   schedule:
-    - cron: '0 3 * * *'  # 6 AM Cairo time (UTC+2)
-    - cron: '0 19 * * *' # 10 PM Cairo time (UTC+2)
+    - cron: '45 8 * * *'  # 11:45 AM Egypt time (UTC+3)
+    - cron: '45 16 * * *' # 7:45 PM Egypt time (UTC+3)
+
 
 jobs:
   run:
