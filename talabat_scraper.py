@@ -464,7 +464,11 @@ def run_scraper():
     SCOPES = ["https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
 
     # Authenticate using google-auth
-    credentials = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_DICT, scopes=SCOPES)
+    try:
+        credentials = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_DICT, scopes=SCOPES)
+    except Exception:
+        SERVICE_ACCOUNT_DICT = json.loads(os.environ["SERVICE_ACCOUNT_DICT"])
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, SCOPES)
     drive_service = build('drive', 'v3', credentials=credentials)
 
 
