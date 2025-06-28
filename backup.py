@@ -8,6 +8,7 @@ from datetime import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import set_with_dataframe
 from config import branches_uuids, khodar_skus
+import pytz
 
 # ————— Static request parts —————
 HEADERS = {
@@ -45,7 +46,8 @@ def fetch_and_process(branch):
     uuid = branch["uuid"]
     url = f"https://www.talabat.com/nextApi/groceries/stores/{uuid}/products"
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    egypt_tz = pytz.timezone("Africa/Cairo")
+    timestamp = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
     all_items = []
     offset, limit = 0, 200
 
