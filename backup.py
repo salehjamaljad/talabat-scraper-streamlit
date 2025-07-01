@@ -9,6 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import set_with_dataframe
 from config import branches_uuids, khodar_skus
 import pytz
+import random
 
 # ————— Static request parts —————
 HEADERS = {
@@ -35,13 +36,9 @@ COOKIES = {
     "next-i18next": "ar",
 }
 
+# Fetch and process a single branch
+
 def fetch_and_process(branch):
-    """
-    Fetch products matching 'khodar.com' for a branch UUID,
-    filter to khodar_skus, enrich, inject missing SKUs.
-    Returns the branch DataFrame with SKU, title, category,
-    {branch}_stock, {branch}_price, {branch}_last_updated.
-    """
     name = branch["name"]
     uuid = branch["uuid"]
     url = f"https://www.talabat.com/nextApi/groceries/stores/{uuid}/products"
@@ -73,7 +70,6 @@ def fetch_and_process(branch):
 
     print(f"[{name}] Crawl complete — total raw items: {len(all_items)}")
 
-    # Build DataFrame
     df = pd.DataFrame([
         {
             "sku": prod.get("sku"),
@@ -86,13 +82,12 @@ def fetch_and_process(branch):
         for prod in all_items if prod.get("sku")
     ])
 
-    # Keep only configured SKUs
+    # Filter and enrich
     df = df[df["sku"].isin(khodar_skus)].copy()
-    # Overwrite title and category
-    df["title"] = df["sku"].apply(lambda s: khodar_skus[s]["title"])
-    df["category"] = df["sku"].apply(lambda s: khodar_skus[s]["category"])
+    df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
+    df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
 
-    # Ensure all SKUs present
+    # Inject missing SKUs
     existing = set(df["sku"])
     missing = set(khodar_skus) - existing
     if missing:
@@ -111,35 +106,51 @@ def fetch_and_process(branch):
 
     return df.sort_values("sku").reset_index(drop=True)
 
+# Merge & consolidate a list of branch DataFrames
 
-if __name__ == "__main__":
-    # Process first three branches
-    dfs = [fetch_and_process(branch) for branch in branches_uuids[:3]]
-
-    # Merge all branch DataFrames on 'sku'
-    alex = dfs[0]
+def merge_and_consolidate(dfs):
+    tlbt = dfs[0]
     for df_branch in dfs[1:]:
-        alex = alex.merge(df_branch, on=["sku", "title", "category"], how="outer")
+        tlbt = tlbt.merge(df_branch, on=["sku", "title", "category"], how="outer")
 
-    # Consolidate price across branch-specific price columns
-    price_cols = [col for col in alex.columns if col.endswith("_price")]
-    alex["price"] = alex[price_cols].bfill(axis=1).iloc[:, 0]
+    # Consolidate price & last_updated
+    price_cols = [c for c in tlbt if c.endswith("_price")]
+    tlbt["price"] = tlbt[price_cols].bfill(axis=1).iloc[:, 0]
 
-    # Consolidate last_updated across branch-specific columns
-    date_cols = [col for col in alex.columns if col.endswith("_last_updated")]
-    alex["last_updated"] = pd.to_datetime(alex[date_cols].bfill(axis=1).iloc[:, 0])
+    date_cols = [c for c in tlbt if c.endswith("_last_updated")]
+    tlbt["last_updated"] = pd.to_datetime(tlbt[date_cols].bfill(axis=1).iloc[:, 0])
 
-    # Fill missing stocks with 0 and calculate total stock
-    stock_cols = [col for col in alex.columns if col.endswith("_stock")]
+    # Fill stock and compute total
+    stock_cols = [c for c in tlbt if c.endswith("_stock")]
     for col in stock_cols:
-        alex[col] = alex[col].fillna(0).astype(int)
-    alex["total stock"] = alex[stock_cols].sum(axis=1)
+        tlbt[col] = tlbt[col].fillna(0).astype(int)
+    tlbt["total stock"] = tlbt[stock_cols].sum(axis=1)
 
-    # Select final columns
     final_cols = ["sku", "title", "price"] + stock_cols + ["total stock", "last_updated", "category"]
-    alexandria = alex[final_cols]
+    return tlbt[final_cols]
 
-    # Authenticate and write to Google Sheet
+# Main runner: fetch once, split, merge, and push to 3 spreadsheets
+
+def run_all_and_push():
+    # 1) Fetch for every branch with delay to avoid blocking
+    dfs = []
+    for branch in branches_uuids:
+        df = fetch_and_process(branch)
+        dfs.append(df)
+        wait = random.uniform(2, 5)
+        print(f"Waiting {wait:.1f}s before next branch…")
+        time.sleep(wait)
+
+    # 2) Split into first 3 and the rest
+    dfs_first3 = dfs[:3]
+    dfs_rest = dfs[3:]
+
+    # 3) Merge & consolidate each set
+    talabat_all = merge_and_consolidate(dfs)
+    talabat_first3 = merge_and_consolidate(dfs_first3)
+    talabat_rest = merge_and_consolidate(dfs_rest)
+
+    # 4) Authenticate once for Google Sheets
     SERVICE_ACCOUNT_DICT = json.loads(st.secrets["SERVICE_ACCOUNT_DICT"])
     scope = [
         "https://spreadsheets.google.com/feeds",
@@ -148,12 +159,31 @@ if __name__ == "__main__":
     creds = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, scope)
     client = gspread.authorize(creds)
 
-    sheet = client.open_by_key("1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4")
-    try:
-        ws = sheet.worksheet("Backup")
-        ws.clear()
-    except gspread.exceptions.WorksheetNotFound:
-        ws = sheet.add_worksheet(title="Backup", rows="1000", cols="20")
+    # 5) Push to main spreadsheet
+    main_key = "1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k"
+    sheet_main = client.open_by_key(main_key)
+    ws_main = sheet_main.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_main.worksheets()] else sheet_main.add_worksheet("Backup", rows="1000", cols="60")
+    ws_main.clear()
+    set_with_dataframe(ws_main, talabat_all)
+    print("Main spreadsheet updated.")
 
-    set_with_dataframe(ws, alexandria)
-    print("Alexandria sheet updated successfully.")
+    # 6) Push first 3 to separate spreadsheet
+    key_first3 = "1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4"
+    sheet_f3 = client.open_by_key(key_first3)
+    ws_f3 = sheet_f3.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_f3.worksheets()] else sheet_f3.add_worksheet("Backup", rows="1000", cols="60")
+    ws_f3.clear()
+    set_with_dataframe(ws_f3, talabat_first3)
+    print("First 3 branches spreadsheet updated.")
+
+    # 7) Push rest to separate spreadsheet
+    key_rest = "1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk"
+    sheet_rt = client.open_by_key(key_rest)
+    ws_rt = sheet_rt.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_rt.worksheets()] else sheet_rt.add_worksheet("Backup", rows="1000", cols="60")
+    ws_rt.clear()
+    set_with_dataframe(ws_rt, talabat_rest)
+    print("Rest of branches spreadsheet updated.")
+
+    return talabat_all, talabat_first3, talabat_rest
+
+if __name__ == "__main__":
+    all_df, first3_df, rest_df = run_all_and_push()
