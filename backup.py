@@ -36,6 +36,29 @@ COOKIES = {
     "next-i18next": "ar",
 }
 
+# Function to append a summary row
+
+def add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
+    # Identify numeric columns except price
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    if 'price' in numeric_cols:
+        numeric_cols.remove('price')
+    # Build summary values
+    summary = {}
+    for col in numeric_cols:
+        summary[col] = df[col].sum()
+    # Non-numeric defaults
+    summary_row = {
+        'sku': 'TOTAL',
+        'title': 'TOTAL',
+        'category': '',
+        'price': None,
+        'last_updated': None,
+        **summary
+    }
+    # Append and return
+    return pd.concat([df, pd.DataFrame([summary_row])], ignore_index=True)
+
 # Fetch and process a single branch
 
 def fetch_and_process(branch):
@@ -129,7 +152,7 @@ def merge_and_consolidate(dfs):
     final_cols = ["sku", "title", "price"] + stock_cols + ["total stock", "last_updated", "category"]
     return tlbt[final_cols]
 
-# Main runner: fetch once, split, merge, and push to 3 spreadsheets
+# Main runner: fetch once, split, merge, append summary, and push to 3 spreadsheets
 
 def run_all_and_push():
     # 1) Fetch for every branch with delay to avoid blocking
@@ -150,7 +173,12 @@ def run_all_and_push():
     talabat_first3 = merge_and_consolidate(dfs_first3)
     talabat_rest = merge_and_consolidate(dfs_rest)
 
-    # 4) Authenticate once for Google Sheets
+    # 4) Append summary rows
+    talabat_all = add_summary_row(talabat_all)
+    talabat_first3 = add_summary_row(talabat_first3)
+    talabat_rest = add_summary_row(talabat_rest)
+
+    # 5) Authenticate once for Google Sheets
     SERVICE_ACCOUNT_DICT = json.loads(st.secrets["SERVICE_ACCOUNT_DICT"])
     scope = [
         "https://spreadsheets.google.com/feeds",
@@ -159,7 +187,7 @@ def run_all_and_push():
     creds = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, scope)
     client = gspread.authorize(creds)
 
-    # 5) Push to main spreadsheet
+    # 6) Push to main spreadsheet
     main_key = "1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k"
     sheet_main = client.open_by_key(main_key)
     ws_main = sheet_main.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_main.worksheets()] else sheet_main.add_worksheet("Backup", rows="1000", cols="60")
@@ -167,7 +195,7 @@ def run_all_and_push():
     set_with_dataframe(ws_main, talabat_all)
     print("Main spreadsheet updated.")
 
-    # 6) Push first 3 to separate spreadsheet
+    # 7) Push first 3 to separate spreadsheet
     key_first3 = "1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4"
     sheet_f3 = client.open_by_key(key_first3)
     ws_f3 = sheet_f3.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_f3.worksheets()] else sheet_f3.add_worksheet("Backup", rows="1000", cols="60")
@@ -175,7 +203,7 @@ def run_all_and_push():
     set_with_dataframe(ws_f3, talabat_first3)
     print("First 3 branches spreadsheet updated.")
 
-    # 7) Push rest to separate spreadsheet
+    # 8) Push rest to separate spreadsheet
     key_rest = "1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk"
     sheet_rt = client.open_by_key(key_rest)
     ws_rt = sheet_rt.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_rt.worksheets()] else sheet_rt.add_worksheet("Backup", rows="1000", cols="60")
