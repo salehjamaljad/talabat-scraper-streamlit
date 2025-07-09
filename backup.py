@@ -1,6 +1,7 @@
 import requests
 import time
 import pandas as pd
+import numpy as np
 import json
 import gspread
 import streamlit as st
@@ -36,18 +37,11 @@ COOKIES = {
     "next-i18next": "ar",
 }
 
-# Function to append a summary row
-
 def add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
-    # Identify numeric columns except price
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     if 'price' in numeric_cols:
         numeric_cols.remove('price')
-    # Build summary values
-    summary = {}
-    for col in numeric_cols:
-        summary[col] = df[col].sum()
-    # Non-numeric defaults
+    summary = {col: df[col].sum() for col in numeric_cols}
     summary_row = {
         'sku': 'TOTAL',
         'title': 'TOTAL',
@@ -56,10 +50,7 @@ def add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
         'last_updated': None,
         **summary
     }
-    # Append and return
     return pd.concat([df, pd.DataFrame([summary_row])], ignore_index=True)
-
-# Fetch and process a single branch
 
 def fetch_and_process(branch):
     name = branch["name"]
@@ -68,10 +59,11 @@ def fetch_and_process(branch):
 
     egypt_tz = pytz.timezone("Africa/Cairo")
     timestamp = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
+
     all_items = []
     offset, limit = 0, 200
-
     print(f"[{name}] request")
+
     while True:
         params = {
             "countryId":   "9",
@@ -105,12 +97,10 @@ def fetch_and_process(branch):
         for prod in all_items if prod.get("sku")
     ])
 
-    # Filter and enrich
     df = df[df["sku"].isin(khodar_skus)].copy()
     df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
     df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
 
-    # Inject missing SKUs
     existing = set(df["sku"])
     missing = set(khodar_skus) - existing
     if missing:
@@ -129,21 +119,18 @@ def fetch_and_process(branch):
 
     return df.sort_values("sku").reset_index(drop=True)
 
-# Merge & consolidate a list of branch DataFrames
-
 def merge_and_consolidate(dfs):
     tlbt = dfs[0]
     for df_branch in dfs[1:]:
         tlbt = tlbt.merge(df_branch, on=["sku", "title", "category"], how="outer")
 
-    # Consolidate price & last_updated
+    # price and date consolidation
     price_cols = [c for c in tlbt if c.endswith("_price")]
     tlbt["price"] = tlbt[price_cols].bfill(axis=1).iloc[:, 0]
-
     date_cols = [c for c in tlbt if c.endswith("_last_updated")]
     tlbt["last_updated"] = pd.to_datetime(tlbt[date_cols].bfill(axis=1).iloc[:, 0])
 
-    # Fill stock and compute total
+    # stock and total stock
     stock_cols = [c for c in tlbt if c.endswith("_stock")]
     for col in stock_cols:
         tlbt[col] = tlbt[col].fillna(0).astype(int)
@@ -152,66 +139,83 @@ def merge_and_consolidate(dfs):
     final_cols = ["sku", "title", "price"] + stock_cols + ["total stock", "last_updated", "category"]
     return tlbt[final_cols]
 
-# Main runner: fetch once, split, merge, append summary, and push to 3 spreadsheets
-
 def run_all_and_push():
-    # 1) Fetch for every branch with delay to avoid blocking
+    # — 1) Fetch & process each branch
     dfs = []
     for branch in branches_uuids:
-        df = fetch_and_process(branch)
-        dfs.append(df)
+        dfs.append(fetch_and_process(branch))
         wait = random.uniform(2, 5)
         print(f"Waiting {wait:.1f}s before next branch…")
         time.sleep(wait)
 
-    # 2) Split into first 3 and the rest
-    dfs_first3 = dfs[:3]
-    dfs_rest = dfs[3:]
+    # — 2) Merge into three DataFrames
+    talabat_all    = merge_and_consolidate(dfs)
+    talabat_first3 = merge_and_consolidate(dfs[:3])
+    talabat_rest   = merge_and_consolidate(dfs[3:])
 
-    # 3) Merge & consolidate each set
-    talabat_all = merge_and_consolidate(dfs)
-    talabat_first3 = merge_and_consolidate(dfs_first3)
-    talabat_rest = merge_and_consolidate(dfs_rest)
+    # — 3) Add summaries for the “Backup” sheets
+    talabat_all_summary    = add_summary_row(talabat_all)
+    talabat_first3_summary = add_summary_row(talabat_first3)
+    talabat_rest_summary   = add_summary_row(talabat_rest)
 
-    # 4) Append summary rows
-    talabat_all = add_summary_row(talabat_all)
-    talabat_first3 = add_summary_row(talabat_first3)
-    talabat_rest = add_summary_row(talabat_rest)
-
-    # 5) Authenticate once for Google Sheets
+    # — 4) Authenticate with Google Sheets
     SERVICE_ACCOUNT_DICT = json.loads(st.secrets["SERVICE_ACCOUNT_DICT"])
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, scope)
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds  = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, scope)
     client = gspread.authorize(creds)
 
-    # 6) Push to main spreadsheet
-    main_key = "1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k"
-    sheet_main = client.open_by_key(main_key)
-    ws_main = sheet_main.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_main.worksheets()] else sheet_main.add_worksheet("Backup", rows="1000", cols="60")
-    ws_main.clear()
-    set_with_dataframe(ws_main, talabat_all)
-    print("Main spreadsheet updated.")
-
-    # 7) Push first 3 to separate spreadsheet
+    # — 5) Spreadsheet keys
+    main_key   = "1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k"
     key_first3 = "1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4"
-    sheet_f3 = client.open_by_key(key_first3)
-    ws_f3 = sheet_f3.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_f3.worksheets()] else sheet_f3.add_worksheet("Backup", rows="1000", cols="60")
-    ws_f3.clear()
-    set_with_dataframe(ws_f3, talabat_first3)
-    print("First 3 branches spreadsheet updated.")
+    key_rest   = "1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk"
 
-    # 8) Push rest to separate spreadsheet
-    key_rest = "1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk"
-    sheet_rt = client.open_by_key(key_rest)
-    ws_rt = sheet_rt.worksheet("Backup") if "Backup" in [ws.title for ws in sheet_rt.worksheets()] else sheet_rt.add_worksheet("Backup", rows="1000", cols="60")
-    ws_rt.clear()
-    set_with_dataframe(ws_rt, talabat_rest)
-    print("Rest of branches spreadsheet updated.")
+    # — 6) Write “Backup” tabs (clear + write)
+    def push_backup(key, df, title="Backup"):
+        sheet  = client.open_by_key(key)
+        titles = [ws.title for ws in sheet.worksheets()]
+        ws     = sheet.worksheet(title) if title in titles else sheet.add_worksheet(title, rows="1000", cols="60")
+        ws.clear()
+        set_with_dataframe(ws, df)
 
-    return talabat_all, talabat_first3, talabat_rest
+    push_backup(main_key,   talabat_all_summary)
+    push_backup(key_first3, talabat_first3_summary)
+    push_backup(key_rest,   talabat_rest_summary)
+
+    # — 7) Append raw data to “DB” tab without clearing
+    sheet_main = client.open_by_key(main_key)
+    titles     = [ws.title for ws in sheet_main.worksheets()]
+    ws_db      = sheet_main.worksheet("DB") if "DB" in titles else sheet_main.add_worksheet("DB", rows="1000", cols="60")
+
+    # Convert last_updated to string, then sanitize every cell
+    db_df = talabat_all.copy()
+    db_df["last_updated"] = db_df["last_updated"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    def sanitize(val):
+        # None or NaT or NaN → None
+        if pd.isna(val):
+            return None
+        # NumPy scalar → native Python
+        if isinstance(val, np.generic):
+            return val.item()
+        # Datetime → ISO string
+        if isinstance(val, (pd.Timestamp, datetime)):
+            return val.strftime("%Y-%m-%d %H:%M:%S")
+        # Otherwise leave as-is (int, float, str)
+        return val
+
+    rows = []
+    for row in db_df.itertuples(index=False, name=None):
+        rows.append([sanitize(cell) for cell in row])
+
+    # Write header if sheet empty
+    if not ws_db.get_all_values():
+        ws_db.append_row(list(db_df.columns), value_input_option='RAW')
+
+    # Batch-append all data rows
+    ws_db.append_rows(rows, value_input_option='RAW')
+    print("DB tab appended with new data.")
+
+    return talabat_all_summary, talabat_first3_summary, talabat_rest_summary
 
 if __name__ == "__main__":
     all_df, first3_df, rest_df = run_all_and_push()
