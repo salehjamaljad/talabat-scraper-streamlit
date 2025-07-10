@@ -85,7 +85,21 @@ def fetch_and_process(branch):
 
     print(f"[{name}] Crawl complete — total raw items: {len(all_items)}")
 
-    # If no items returned, build empty df to trigger missing logic
+    # If no items fetched, return full SKU list with 0 stock and None price
+    if not all_items:
+        return pd.DataFrame([
+            {
+                "sku": sku,
+                "title": khodar_skus[sku]["title"],
+                "category": khodar_skus[sku]["category"],
+                f"{name}_stock": 0,
+                f"{name}_price": None,
+                f"{name}_last_updated": timestamp
+            }
+            for sku in khodar_skus
+        ]).sort_values("sku").reset_index(drop=True)
+
+    # Normal flow for non-empty items
     df = pd.DataFrame([
         {
             "sku": prod.get("sku"),
@@ -98,20 +112,12 @@ def fetch_and_process(branch):
         for prod in all_items if prod.get("sku")
     ])
 
-    # Filter to our SKUs
-    if 'sku' in df.columns:
-        df = df[df["sku"].isin(khodar_skus)].copy()
-        df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
-        df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
+    df = df[df["sku"].isin(khodar_skus)].copy()
+    df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
+    df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
 
-        existing = set(df["sku"])
-        missing = set(khodar_skus) - existing
-    else:
-        # No valid items, treat all SKUs as missing
-        existing = set()
-        missing = set(khodar_skus)
-
-    # Add missing SKUs with zero stock
+    existing = set(df["sku"])
+    missing = set(khodar_skus) - existing
     if missing:
         missing_rows = [
             {
