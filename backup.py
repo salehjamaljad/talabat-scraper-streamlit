@@ -85,21 +85,6 @@ def fetch_and_process(branch):
 
     print(f"[{name}] Crawl complete — total raw items: {len(all_items)}")
 
-    # If no items fetched, return full SKU list with 0 stock and None price
-    if not all_items:
-        return pd.DataFrame([
-            {
-                "sku": sku,
-                "title": khodar_skus[sku]["title"],
-                "category": khodar_skus[sku]["category"],
-                f"{name}_stock": 0,
-                f"{name}_price": None,
-                f"{name}_last_updated": timestamp
-            }
-            for sku in khodar_skus
-        ]).sort_values("sku").reset_index(drop=True)
-
-    # Normal flow for non-empty items
     df = pd.DataFrame([
         {
             "sku": prod.get("sku"),
