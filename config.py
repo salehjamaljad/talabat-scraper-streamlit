@@ -151,6 +151,7 @@ branches_uuids = [
     { "name": "Madinaty Craft", "uuid": "44f2446a-aed9-4577-9cc1-216599feecbb" },
     { "name": "Maadi Corniche", "uuid": "0bbe2d06-bbf4-4992-b74f-d19304dd4fc8" },
     { "name": "Maadi Lasleky", "uuid": "8489bf70-67ca-466c-8197-4b197f670be1" },
+    { "name": "Maryotya", "uuid": "f994b508-8345-49cf-9301-7c278a4f5c27" },
     { "name": "Mansoura", "uuid": "b1e5e540-501d-486d-b09a-e376c725f7b0" },
     { "name": "Mansoura gomhoreya", "uuid": "11761dd1-59dc-491d-9dcb-8cbc1d46ffa7" },
     { "name": "Midan Lubnan", "uuid": "a163a509-aaea-4424-a6f3-c8e4aed5ee8d" },
