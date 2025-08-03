@@ -37,6 +37,7 @@ COOKIES = {
     "next-i18next": "ar",
 }
 
+
 def add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     if 'price' in numeric_cols:
@@ -52,7 +53,8 @@ def add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
     }
     return pd.concat([df, pd.DataFrame([summary_row])], ignore_index=True)
 
-def fetch_and_process(branch):
+
+def fetch_and_process(branch, query="khodar.com", filter_skus=True):
     name = branch["name"]
     uuid = branch["uuid"]
     url = f"https://www.talabat.com/nextApi/groceries/stores/{uuid}/products"
@@ -62,12 +64,12 @@ def fetch_and_process(branch):
 
     all_items = []
     offset, limit = 0, 200
-    print(f"[{name}] request")
+    print(f"[{name}] request for '{query}'")
 
     while True:
         params = {
             "countryId":   "9",
-            "query":       "khodar.com",
+            "query":       query,
             "limit":       str(limit),
             "offset":      str(offset),
             "isDarkstore": "true",
@@ -85,26 +87,13 @@ def fetch_and_process(branch):
 
     print(f"[{name}] Crawl complete — total raw items: {len(all_items)}")
 
-    # If no items fetched, return full SKU list with 0 stock and None price
-    if not all_items:
-        return pd.DataFrame([
-            {
-                "sku": sku,
-                "title": khodar_skus[sku]["title"],
-                "category": khodar_skus[sku]["category"],
-                f"{name}_stock": 0,
-                f"{name}_price": None,
-                f"{name}_last_updated": timestamp
-            }
-            for sku in khodar_skus
-        ]).sort_values("sku").reset_index(drop=True)
-
-    # Normal flow for non-empty items
+    # Build DataFrame for all fetched items
     df = pd.DataFrame([
         {
             "sku": prod.get("sku"),
-            "title": None,
-            "category": None,
+            # Attempt to grab title/category if available
+            "title": prod.get("title"),
+            "category": prod.get("category"),
             f"{name}_stock": prod.get("stockAmount", 0),
             f"{name}_price": prod.get("price", None),
             f"{name}_last_updated": timestamp
@@ -112,29 +101,31 @@ def fetch_and_process(branch):
         for prod in all_items if prod.get("sku")
     ])
 
-    df = df[df["sku"].isin(khodar_skus)].copy()
-    df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
-    df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
-
-    existing = set(df["sku"])
-    missing = set(khodar_skus) - existing
-    if missing:
-        missing_rows = [
-            {
-                "sku": sku,
-                "title": khodar_skus[sku]["title"],
-                "category": khodar_skus[sku]["category"],
-                f"{name}_stock": 0,
-                f"{name}_price": None,
-                f"{name}_last_updated": timestamp
-            }
-            for sku in missing
-        ]
-        df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
+    if filter_skus:
+        # Apply khodar.com filtering
+        df = df[df["sku"].isin(khodar_skus)].copy()
+        df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
+        df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
+        # Add missing SKUs as zero-stock
+        existing = set(df["sku"])
+        missing = set(khodar_skus) - existing
+        if missing:
+            missing_rows = [
+                {
+                    "sku": sku,
+                    "title": khodar_skus[sku]["title"],
+                    "category": khodar_skus[sku]["category"],
+                    f"{name}_stock": 0,
+                    f"{name}_price": None,
+                    f"{name}_last_updated": timestamp
+                }
+                for sku in missing
+            ]
+            df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
 
     return df.sort_values("sku").reset_index(drop=True)
     
-    
+
 def merge_and_consolidate(dfs):
     tlbt = dfs[0]
     for df_branch in dfs[1:]:
@@ -155,37 +146,52 @@ def merge_and_consolidate(dfs):
     final_cols = ["sku", "title", "price"] + stock_cols + ["total stock", "last_updated", "category"]
     return tlbt[final_cols]
 
+
 def run_all_and_push():
-    # — 1) Fetch & process each branch
+    # — 1) Fetch & process each branch for khodar.com
     dfs = []
     for branch in branches_uuids:
-        dfs.append(fetch_and_process(branch))
-        wait = random.uniform(2, 5)
-        print(f"Waiting {wait:.1f}s before next branch…")
-        time.sleep(wait)
+        dfs.append(fetch_and_process(branch, query="khodar.com", filter_skus=True))
+        time.sleep(random.uniform(2, 5))
 
-    # — 2) Merge into three DataFrames
+    # — 2) Merge into DataFrames for khodar.com
     talabat_all    = merge_and_consolidate(dfs)
     talabat_first3 = merge_and_consolidate(dfs[:3])
     talabat_rest   = merge_and_consolidate(dfs[3:])
 
-    # — 3) Add summaries for the “Backup” sheets
+    # — 3) Add summaries for the “Backup” tabs (khodar)
     talabat_all_summary    = add_summary_row(talabat_all)
     talabat_first3_summary = add_summary_row(talabat_first3)
     talabat_rest_summary   = add_summary_row(talabat_rest)
 
-    # — 4) Authenticate with Google Sheets
+    # — 4) Fetch & process each branch for النور (no filtering)
+    dfs_enour = []
+    for branch in branches_uuids:
+        dfs_enour.append(fetch_and_process(branch, query="النور", filter_skus=False))
+        time.sleep(random.uniform(2, 5))
+
+    # — 5) Merge into DataFrames for النور
+    elnour_all    = merge_and_consolidate(dfs_enour)
+    elnour_first3 = merge_and_consolidate(dfs_enour[:3])
+    elnour_rest   = merge_and_consolidate(dfs_enour[3:])
+
+    # — 6) Add summaries for the “elnour” tabs
+    elnour_all_summary    = add_summary_row(elnour_all)
+    elnour_first3_summary = add_summary_row(elnour_first3)
+    elnour_rest_summary   = add_summary_row(elnour_rest)
+
+    # — 7) Authenticate with Google Sheets
     SERVICE_ACCOUNT_DICT = json.loads(st.secrets["SERVICE_ACCOUNT_DICT"])
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds  = ServiceAccountCredentials.from_json_keyfile_dict(SERVICE_ACCOUNT_DICT, scope)
     client = gspread.authorize(creds)
 
-    # — 5) Spreadsheet keys
+    # — 8) Spreadsheet keys
     main_key   = "1bHsZvDJQ1U-V3yPalU2gKNRqLOyjtFP509NpHSVj6_k"
     key_first3 = "1d3oDBdu8SqnBlaFDrBDL2lEwe5F9f4RL7RTzK_SRW-4"
     key_rest   = "1cbhFF2daE7iUe0vlebIwohQN3UoxsZWY4I_blqr_8rk"
 
-    # — 6) Write “Backup” tabs (clear + write)
+    # — 9) Write “Backup” tabs for khodar.com
     def push_backup(key, df, title="Backup"):
         sheet  = client.open_by_key(key)
         titles = [ws.title for ws in sheet.worksheets()]
@@ -193,45 +199,42 @@ def run_all_and_push():
         ws.clear()
         set_with_dataframe(ws, df)
 
-    push_backup(main_key,   talabat_all_summary)
-    push_backup(key_first3, talabat_first3_summary)
-    push_backup(key_rest,   talabat_rest_summary)
+    push_backup(main_key,   talabat_all_summary,    title="Backup")
+    push_backup(key_first3, talabat_first3_summary, title="Backup")
+    push_backup(key_rest,   talabat_rest_summary,   title="Backup")
 
-    # — 7) Append raw data to “DB” tab without clearing
+    # — 10) Write “elnour” tabs for النور
+    push_backup(main_key,   elnour_all_summary,    title="elnour")
+    push_backup(key_first3, elnour_first3_summary, title="elnour")
+    push_backup(key_rest,   elnour_rest_summary,   title="elnour")
+
+    # — 11) Append raw data to “DB” tab for khodar.com
     sheet_main = client.open_by_key(main_key)
     titles     = [ws.title for ws in sheet_main.worksheets()]
     ws_db      = sheet_main.worksheet("DB") if "DB" in titles else sheet_main.add_worksheet("DB", rows="1000", cols="60")
 
-    # Convert last_updated to string, then sanitize every cell
     db_df = talabat_all.copy()
     db_df["last_updated"] = db_df["last_updated"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
     def sanitize(val):
-        # None or NaT or NaN → None
         if pd.isna(val):
             return None
-        # NumPy scalar → native Python
         if isinstance(val, np.generic):
             return val.item()
-        # Datetime → ISO string
         if isinstance(val, (pd.Timestamp, datetime)):
             return val.strftime("%Y-%m-%d %H:%M:%S")
-        # Otherwise leave as-is (int, float, str)
         return val
 
     rows = []
     for row in db_df.itertuples(index=False, name=None):
         rows.append([sanitize(cell) for cell in row])
 
-    # Write header if sheet empty
     if not ws_db.get_all_values():
         ws_db.append_row(list(db_df.columns), value_input_option='RAW')
-
-    # Batch-append all data rows
     ws_db.append_rows(rows, value_input_option='RAW')
     print("DB tab appended with new data.")
 
-    return talabat_all_summary, talabat_first3_summary, talabat_rest_summary
+    return talabat_all_summary, talabat_first3_summary, talabat_rest_summary, elnour_all_summary
 
 if __name__ == "__main__":
-    all_df, first3_df, rest_df = run_all_and_push()
+    all_df, first3_df, rest_df, elnour_df = run_all_and_push()
