@@ -134,7 +134,15 @@ for n in nodes:
     sku = n.get("sku") or ""
     url_key = n.get("name")
     weight = n.get("weight_increment_step")
+    if weight == None:
+        weight = ""
+    else:
+        weight = weight
     unit = n.get("weight_base_unit")
+    if unit == None:
+        unit = ""
+    else:
+        unit = unit
     # convert url_key to readable name (replace dashes)
     name = url_key + " " + str(weight) + " " + str(unit)
     # price may be missing; use get chain safely
