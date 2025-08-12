@@ -81,7 +81,7 @@ variables = {
 
 headers = {
     "accept": "*/*",
-    "accept-language": "en-GB,en;q=0.6",
+    "accept-language": "ar-EG,ar;q=0.9,en;q=0.8",
     "content-type": "application/json",
     "origin": "https://seoudisupermarket.com",
     "priority": "u=1, i",
@@ -94,7 +94,7 @@ headers = {
     "sec-fetch-site": "same-site",
     "sec-gpc": "1",
     "sourcecode": "18",
-    "store": "default",
+    "store": "ar_EG",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
 }
 
