@@ -132,9 +132,9 @@ prices = []
 for n in nodes:
     # some items may be missing fields; use .get
     sku = n.get("sku") or ""
-    url_key = n.get("url_key") or n.get("name") or ""
+    url_key = n.get("name")
     # convert url_key to readable name (replace dashes)
-    name = url_key.replace("-", " ") if isinstance(url_key, str) else str(url_key)
+    name = url_key
     # price may be missing; use get chain safely
     price = None
     try:
@@ -213,4 +213,3 @@ print(f"Wrote {len(rows)} rows to spreadsheet '{SPREADSHEET_ID}' worksheet '{WOR
 print("Top-level response keys:", list(data.keys()))
 if "data" in data:
     print("GraphQL 'data' keys:", list(data["data"].keys()))
-
