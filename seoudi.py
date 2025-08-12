@@ -148,15 +148,11 @@ for n in nodes:
     # price may be missing; use get chain safely
     price = None
     try:
-        base_price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
-        if base_price is not None:
-            base_price = float(base_price)
-            if weight is not None:
-                price = round(base_price * weight, 2)
-            else:
-                price = round(base_price, 2)
+        price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
+        if weight != "":
+            price = round(price * float(weight), 2)
         else:
-            price = base_price
+            price = price
     except Exception:
         price = None
 
