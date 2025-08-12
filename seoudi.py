@@ -152,7 +152,7 @@ for n in nodes:
     except Exception:
         price = None
 
-    skus.append(sku)
+    skus.append(int(sku))
     names.append(name)
     prices.append(price)
 
