@@ -152,7 +152,7 @@ for n in nodes:
         if weight != None:
             price = round(price * float(weight), 2)
         else:
-            price = price
+            price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
     except Exception:
         price = None
 
