@@ -1,0 +1,32 @@
+name: Run seoudi
+
+on:
+  workflow_dispatch:  # allows manual trigger
+  schedule:
+    - cron: '45 8 * * *'  # 11:45 AM Egypt time (UTC+3)
+    - cron: '45 16 * * *' # 7:45 PM Egypt time (UTC+3)
+
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    env:
+      SERVICE_ACCOUNT_DICT: ${{ secrets.SERVICE_ACCOUNT_DICT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run seoudi
+        run: python seoudi.py
