@@ -147,14 +147,11 @@ for n in nodes:
     name = url_key + " " + str(weight) + " " + str(unit)
     # price may be missing; use get chain safely
     price = None
-    try:
+    price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
+    if weight is not None:
+        price = round(price * float(weight), 2)
+    else:
         price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
-        if weight is not None:
-            price = round(price * float(weight), 2)
-        else:
-            price = n.get("price_range", {}).get("maximum_price", {}).get("final_price", {}).get("value")
-    except Exception:
-        price = None
 
     skus.append(int(sku))
     names.append(name)
