@@ -133,8 +133,10 @@ for n in nodes:
     # some items may be missing fields; use .get
     sku = n.get("sku") or ""
     url_key = n.get("name")
+    weight = n.get("weight_increment_step")
+    unit = n.get("weight_base_unit")
     # convert url_key to readable name (replace dashes)
-    name = url_key
+    name = url_key + " " + weight + " " + unit
     # price may be missing; use get chain safely
     price = None
     try:
