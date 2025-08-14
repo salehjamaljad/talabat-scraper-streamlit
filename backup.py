@@ -193,11 +193,42 @@ def run_all_and_push():
 
     # — 9) Write “Backup” tabs for khodar.com
     def push_backup(key, df, title="Backup"):
-        sheet  = client.open_by_key(key)
+        sheet = client.open_by_key(key)
         titles = [ws.title for ws in sheet.worksheets()]
-        ws     = sheet.worksheet(title) if title in titles else sheet.add_worksheet(title, rows="1000", cols="60")
+
+        # Try to read the previous TOTAL row before we clear the sheet
+        prev_row = None
+        if title in titles:
+            old_ws = sheet.worksheet(title)
+            existing = old_ws.get_all_values()  # list of rows (strings)
+            if existing:
+                # 1) Prefer to find a row where the first cell says 'TOTAL' (case-insensitive)
+                idx = next((i for i, row in enumerate(existing)
+                            if row and row[0].strip().upper() == "TOTAL"), None)
+                # 2) If not found, fall back to row index 127 -> sheet row 128 (0-indexed)
+                if idx is None and len(existing) >= 128:
+                    idx = 127
+                if idx is not None:
+                    prev_row = existing[idx]
+
+        # Prepare worksheet (create if missing)
+        ws = sheet.worksheet(title) if title in titles else sheet.add_worksheet(title, rows="1000", cols="60")
         ws.clear()
+
+        # Write the dataframe (headers at row 1, data starts row 2)
         set_with_dataframe(ws, df)
+
+        # If we found a previous total row, normalize its length then write it just after the new data
+        if prev_row:
+            # Normalize/truncate/pad to match number of columns we just wrote
+            ncols = len(df.columns)
+            prev_row = prev_row[:ncols] + [""] * max(0, ncols - len(prev_row))
+            # Mark it so it's obvious this is the previous total
+            prev_row[0] = "PREVIOUS TOTAL"
+
+            # target row is: header(1) + rows(len(df)) + 1 -> len(df) + 2
+            target_row = len(df) + 2
+            ws.update(f"A{target_row}", [prev_row], value_input_option="RAW")
 
     push_backup(main_key,   talabat_all_summary,    title="Backup")
     push_backup(key_first3, talabat_first3_summary, title="Backup")
