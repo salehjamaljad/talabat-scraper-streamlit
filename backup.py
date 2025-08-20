@@ -8,7 +8,7 @@ import streamlit as st
 from datetime import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import set_with_dataframe
-from config import branches_uuids, khodar_skus
+from config import branches_uuids, khodar_skus, filter_skus
 import pytz
 import random
 
@@ -174,6 +174,19 @@ def run_all_and_push():
     elnour_all    = merge_and_consolidate(dfs_enour)
     elnour_first3 = merge_and_consolidate(dfs_enour[:3])
     elnour_rest   = merge_and_consolidate(dfs_enour[3:])
+
+    # --- new: exclude filter_skus from the elnour datasets
+    # ensure comparison uses strings (config SKUs might be numeric or mixed)
+    filter_skus_set = set(str(s) for s in filter_skus)
+
+    def exclude_filtered_skus(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
+        return df[~df["sku"].astype(str).isin(filter_skus_set)].reset_index(drop=True)
+
+    elnour_all    = exclude_filtered_skus(elnour_all)
+    elnour_first3 = exclude_filtered_skus(elnour_first3)
+    elnour_rest   = exclude_filtered_skus(elnour_rest)
 
     # — 6) Add summaries for the “elnour” tabs
     elnour_all_summary    = add_summary_row(elnour_all)
