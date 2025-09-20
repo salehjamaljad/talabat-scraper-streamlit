@@ -136,6 +136,7 @@ branches_uuids = [
     { "name": "AinShams", "uuid": "b39cf03b-f5bc-460c-a6b2-997100023b16" },
     { "name": "Al-Manial", "uuid": "4c84440c-947e-4e21-b2f9-ef9d17294648" },
     { "name": "Asyut", "uuid": "0fd5df79-69e1-4ee7-973c-e888f7d0e87d" },
+    {"name" : "banafseg", "uuid": "9fb71fe8-c27c-4522-9715-b1cc5f8e54e6"},
     { "name": "Bright stars", "uuid": "330b5cda-352a-48a1-9bac-c3504fabc6eb" },
     { "name": "City Stars", "uuid": "5fc2625a-55ac-4901-9b4e-e440ddf3510a" },
     { "name": "Dokki", "uuid": "998b97f6-7d72-4ec6-8f58-10d15757aa86" },
