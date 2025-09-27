@@ -102,31 +102,58 @@ def fetch_and_process(branch, query="khodar.com", filter_skus=True):
     ])
 
     if filter_skus:
-        # Apply khodar.com filtering
-        df = df[df["sku"].isin(khodar_skus)].copy()
+        # defensive: ensure df is a DataFrame
+        if df is None or not isinstance(df, pd.DataFrame):
+            df = pd.DataFrame()
 
-        # If df is empty after filtering (or was empty), create rows for all SKUs
-        if df.empty:
-            rows = [
+        # try common alternate sku column names and rename to 'sku'
+        if "sku" not in df.columns:
+            alt_cols = ["SKU", "Sku", "product_sku", "item_sku", "code", "id"]
+            for c in alt_cols:
+                if c in df.columns:
+                    df = df.rename(columns={c: "sku"})
+                    break
+
+        # helper to build full list-of-skus rows
+        def _full_skus_rows():
+            return [
                 {
-                    "sku": sku,
-                    "title": meta["title"],
-                    "category": meta["category"],
+                    "sku": str(sku),
+                    "title": meta.get("title"),
+                    "category": meta.get("category"),
                     f"{name}_stock": 0,
                     f"{name}_price": None,
                     f"{name}_last_updated": timestamp
                 }
                 for sku, meta in khodar_skus.items()
             ]
-            df = pd.DataFrame(rows)
+
+        # if still missing 'sku' column or df empty -> return full-skus DataFrame
+        if "sku" not in df.columns or df.empty:
+            df = pd.DataFrame(_full_skus_rows())
             return df.sort_values("sku").reset_index(drop=True)
 
-        # If not empty, map title/category and add any missing SKUs as zero-stock
-        df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
-        df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
+        # normalize sku dtype to string to avoid mismatches
+        df["sku"] = df["sku"].astype(str)
 
+        # make sure khodar keys are strings for comparison
+        khodar_keys = set(map(str, khodar_skus.keys()))
+
+        # filter to khodar SKUs
+        df = df[df["sku"].isin(khodar_keys)].copy()
+
+        # if filtering removed everything, create full list-of-skus DataFrame
+        if df.empty:
+            df = pd.DataFrame(_full_skus_rows())
+            return df.sort_values("sku").reset_index(drop=True)
+
+        # safe mapping for title/category (use .get to avoid KeyError)
+        df["title"] = df["sku"].map(lambda s: khodar_skus.get(s, {}).get("title"))
+        df["category"] = df["sku"].map(lambda s: khodar_skus.get(s, {}).get("category"))
+
+        # Add missing SKUs as zero-stock (if any)
         existing = set(df["sku"])
-        missing = set(khodar_skus) - existing
+        missing = set(map(str, khodar_skus.keys())) - existing
         if missing:
             missing_rows = [
                 {
@@ -142,6 +169,7 @@ def fetch_and_process(branch, query="khodar.com", filter_skus=True):
             df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
 
     return df.sort_values("sku").reset_index(drop=True)
+
 
     
 
