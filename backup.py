@@ -104,9 +104,27 @@ def fetch_and_process(branch, query="khodar.com", filter_skus=True):
     if filter_skus:
         # Apply khodar.com filtering
         df = df[df["sku"].isin(khodar_skus)].copy()
+
+        # If df is empty after filtering (or was empty), create rows for all SKUs
+        if df.empty:
+            rows = [
+                {
+                    "sku": sku,
+                    "title": meta["title"],
+                    "category": meta["category"],
+                    f"{name}_stock": 0,
+                    f"{name}_price": None,
+                    f"{name}_last_updated": timestamp
+                }
+                for sku, meta in khodar_skus.items()
+            ]
+            df = pd.DataFrame(rows)
+            return df.sort_values("sku").reset_index(drop=True)
+
+        # If not empty, map title/category and add any missing SKUs as zero-stock
         df["title"] = df["sku"].map(lambda s: khodar_skus[s]["title"])
         df["category"] = df["sku"].map(lambda s: khodar_skus[s]["category"])
-        # Add missing SKUs as zero-stock
+
         existing = set(df["sku"])
         missing = set(khodar_skus) - existing
         if missing:
@@ -124,6 +142,7 @@ def fetch_and_process(branch, query="khodar.com", filter_skus=True):
             df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
 
     return df.sort_values("sku").reset_index(drop=True)
+
     
 
 def merge_and_consolidate(dfs):
