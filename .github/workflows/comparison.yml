@@ -1,4 +1,4 @@
-name: Run comparison
+name: Run comparison # this is for enabale
 
 on:
   workflow_dispatch:  # allows manual trigger
