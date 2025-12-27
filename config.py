@@ -159,6 +159,7 @@ branches_uuids = [
     { "name": "First Mall", "uuid": "9fb71fe8-c27c-4522-9715-b1cc5f8e54e6" },
     { "name": "First Settlement", "uuid": "41d2dfb5-2e27-4ff9-8a00-ea3030e58592" },
     { "name": "Fount Mall", "uuid": "94799811-0ee8-4ba4-a8ea-b3d9587507e3" },
+    { "name": "Festival October", "uuid": "e72426bc-d7f2-4081-b961-cc59accae208" },
     { "name": "Golden Square", "uuid": "85281db4-2128-4a9b-ac39-c5bbdc062ac8" },
     { "name": "Hadaeq Al Qubbah", "uuid": "4bd36fff-dbb0-4613-8096-ed91346db064" },
     { "name": "Hadayek October", "uuid": "8e45a4ec-90ef-4175-a7db-fabc016664a3" },
@@ -180,12 +181,14 @@ branches_uuids = [
     { "name": "Mokatam hadaba", "uuid": "80e0405b-c713-4a6b-bc1c-4fff9468b6c9" },
     { "name": "Nasr City", "uuid": "94799811-0ee8-4ba4-a8ea-b3d9587507e3" },
     { "name": "Nasr City Hay Asher", "uuid": "0def9a85-9ffe-4f61-af77-823031de62ce" },
-    { "name": "Obour", "uuid": "53e2b45e-5bc3-4c45-a7f2-2afa2eae04eb" },
+    { "name": "Obour 1", "uuid": "53e2b45e-5bc3-4c45-a7f2-2afa2eae04eb" },
+    { "name": "Obour 2", "uuid": "3044f301-3fd7-44c7-b333-f321d6234d9e" },
     { "name": "October", "uuid": "df3a752a-b0c3-4034-9228-8ba853663d4f" },
     { "name": "Palm Hills", "uuid": "3d6277f2-9e9d-48e9-b29f-580392ee4246" },
     { "name": "Ports Said", "uuid": "8dfc564b-5db3-4436-818a-e3b0c1771996" },
     { "name": "Rehab", "uuid": "edd095f6-9c70-4d4b-a468-acbd127a6b9e" },
     { "name": "Rehab Two", "uuid": "f2b6de3e-6c08-42b9-9d97-fe992c977c23" },
+    { "name": "Rock Vera", "uuid": "f114df35-a1bd-4d0c-82e5-96724756d96b" },
     { "name": "Shobra", "uuid": "3c72e476-4912-4a04-b474-acfd745d17f0" },
     { "name": "Shrouk", "uuid": "d11df624-95ff-49e6-91a3-b258fdeb250f" },
     { "name": "Shrouk 2", "uuid": "f011e6b1-5444-46da-9cf8-f03911bafecf" },
@@ -193,8 +196,9 @@ branches_uuids = [
     { "name": "Tanta", "uuid": "533186de-da1e-4ece-b7b0-b588348b8beb" },
     { "name": "Zagazig", "uuid": "cba25734-60aa-4e72-a404-4037422b1f2d" },
     { "name": "Zahraa El Maadi", "uuid": "54a8cdbd-9bc3-4b66-9a3a-61be92986a07" },
-    { "name": "Zahraa El Maadi Two", "uuid": "54a8cdbd-9bc3-4b66-9a3a-61be92986a07" },
-    { "name": "Zayed", "uuid": "2668fb7e-1a0e-47a1-a238-5b7ee910028c" }]
+    { "name": "Zahraa El Maadi Two", "uuid": "6d8ddf09-23ad-4229-ba9c-35132613c56d" },
+    { "name": "Zayed 1", "uuid": "2668fb7e-1a0e-47a1-a238-5b7ee910028c" },
+    { "name": "Zayed 2", "uuid": "2668fb7e-1a0e-47a1-a238-5b7ee910028c" }]
 
 
 
