@@ -145,6 +145,7 @@ branches_uuids = [
     { "name": "Ibrahimia", "uuid": "40694202-7c6b-48eb-b0e3-477643e27e02"},
     { "name": "Wenget", "uuid": "8315a174-6983-4221-a787-d6897d6484b3"},
     { "name": "Sidibeshr", "uuid": "1906da69-0aae-4974-813e-f9e58fda9123"},
+    { "name": "Smouha", "uuid": "c59db2bb-56a1-4893-95aa-4f0b1aaf0342"},
     { "name": "Agouza", "uuid": "029058aa-ab11-4a64-9a20-bf90de19eff4" },
     { "name": "AinShams", "uuid": "b39cf03b-f5bc-460c-a6b2-997100023b16" },
     { "name": "Al-Manial", "uuid": "4c84440c-947e-4e21-b2f9-ef9d17294648" },
@@ -152,6 +153,7 @@ branches_uuids = [
     {"name" : "banafseg", "uuid": "9fb71fe8-c27c-4522-9715-b1cc5f8e54e6"},
     { "name": "Bright stars", "uuid": "330b5cda-352a-48a1-9bac-c3504fabc6eb" },
     { "name": "City Stars", "uuid": "5fc2625a-55ac-4901-9b4e-e440ddf3510a" },
+    { "name": "Damietta", "uuid": "72d7a588-4c59-4e5a-a1a3-1d425619a730"},
     { "name": "Dokki", "uuid": "998b97f6-7d72-4ec6-8f58-10d15757aa86" },
     { "name": "El Sayida Zeinab", "uuid": "c05cb7cf-0014-40d6-8412-16ca49f1ca35" },
     { "name": "ElDaher", "uuid": "3e7e5e90-2feb-4ac5-8e14-30e64135fa6a" },
@@ -181,6 +183,7 @@ branches_uuids = [
     { "name": "Mokatam hadaba", "uuid": "80e0405b-c713-4a6b-bc1c-4fff9468b6c9" },
     { "name": "Nasr City", "uuid": "94799811-0ee8-4ba4-a8ea-b3d9587507e3" },
     { "name": "Nasr City Hay Asher", "uuid": "0def9a85-9ffe-4f61-af77-823031de62ce" },
+    { "name": "Nasr City Hadika Dawlia", "uuid": "29ab905a-ffd5-4165-9078-256eabfe1929"},
     { "name": "Obour 1", "uuid": "53e2b45e-5bc3-4c45-a7f2-2afa2eae04eb" },
     { "name": "Obour 2", "uuid": "3044f301-3fd7-44c7-b333-f321d6234d9e" },
     { "name": "October", "uuid": "df3a752a-b0c3-4034-9228-8ba853663d4f" },
@@ -236,3 +239,4 @@ filter_skus = [
     "IK3ZOY",
     "U3SW78"
 ]
+
