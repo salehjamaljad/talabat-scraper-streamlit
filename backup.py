@@ -203,12 +203,12 @@ def run_all_and_push():
 
     # — 2) Merge into DataFrames for khodar.com
     talabat_all    = merge_and_consolidate(dfs)
-    talabat_first3 = merge_and_consolidate(dfs[:3])
-    talabat_rest   = merge_and_consolidate(dfs[3:])
+    talabat_first4 = merge_and_consolidate(dfs[:4])
+    talabat_rest   = merge_and_consolidate(dfs[4:])
 
     # — 3) Add summaries for the “Backup” tabs (khodar)
     talabat_all_summary    = add_summary_row(talabat_all)
-    talabat_first3_summary = add_summary_row(talabat_first3)
+    talabat_first4_summary = add_summary_row(talabat_first4)
     talabat_rest_summary   = add_summary_row(talabat_rest)
 
     # — 4) Fetch & process each branch for النور (no filtering)
@@ -291,7 +291,7 @@ def run_all_and_push():
             ws.update(f"A{target_row}", [prev_row], value_input_option="RAW")
 
     push_backup(main_key,   talabat_all_summary,    title="Backup")
-    push_backup(key_first3, talabat_first3_summary, title="Backup")
+    push_backup(key_first3, talabat_first4_summary, title="Backup")
     push_backup(key_rest,   talabat_rest_summary,   title="Backup")
 
     # — 10) Write “elnour” tabs for النور
@@ -325,7 +325,8 @@ def run_all_and_push():
     ws_db.append_rows(rows, value_input_option='RAW')
     print("DB tab appended with new data.")
 
-    return talabat_all_summary, talabat_first3_summary, talabat_rest_summary, elnour_all_summary
+    return talabat_all_summary, talabat_first4_summary, talabat_rest_summary, elnour_all_summary
 
 if __name__ == "__main__":
     all_df, first3_df, rest_df, elnour_df = run_all_and_push()
+
