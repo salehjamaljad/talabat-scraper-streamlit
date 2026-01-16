@@ -1,7 +1,7 @@
 name: Run comparison
 
 on:
-  workflow_dispatch:  # allows manual trigger
+  workflow_dispatch:  # allows manual trigger # hello
   schedule:
     - cron: '55 18 * * *' # 7:45 PM Egypt time (UTC+3)
 
